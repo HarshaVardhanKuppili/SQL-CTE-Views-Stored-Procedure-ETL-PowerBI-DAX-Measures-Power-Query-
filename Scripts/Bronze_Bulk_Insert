@@ -1,0 +1,27 @@
+-- Bulk Insert
+Use Import/Export Option to easily Load the Data.
+Or 
+Use the Below Code for All tables
+
+
+-- Keep Truncate if you require --
+
+
+COPY bronze.crm_cust_info (
+    cst_id,
+    cst_key,
+    cst_firstname,
+    cst_lastname,
+    cst_marital_status,
+    cst_gndr,
+    cst_create_date
+)
+FROM 'C:/SQL/cust_info.csv'  -------> "" YOUR PATH  ""
+WITH (
+    FORMAT csv,
+    HEADER true,
+    DELIMITER ',',
+    QUOTE '"',
+    NULL '',
+    ENCODING 'UTF8'
+);
