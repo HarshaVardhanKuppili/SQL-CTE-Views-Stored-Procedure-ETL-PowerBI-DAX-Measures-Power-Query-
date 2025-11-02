@@ -12,4 +12,5 @@ Medallion Architecture - Bronze(is similar to stage its original as it is and he
 We need to decide and confirm one of the above and use it as first step on building architecture.
 
 Secret priciple - SOC - Seperation of Concerns - this is what is bronze, silver and gold layer does.
+Naming convention - should have standardised - camel case - kebab case - snake case - we are going with snake case.
 
