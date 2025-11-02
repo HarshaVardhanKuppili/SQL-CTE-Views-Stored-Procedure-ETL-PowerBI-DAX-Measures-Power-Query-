@@ -14,3 +14,4 @@ We need to decide and confirm one of the above and use it as first step on build
 Secret priciple - SOC - Seperation of Concerns - this is what is bronze, silver and gold layer does.
 Naming convention - should have standardised - camel case - kebab case - snake case - we are going with snake case.
 
+Besigning BRONZE - setup meeting with stakeholder - Understand Who own the Data ?, What Business Process it supports ? and System and Data Documentation ?, dara Model and Catalog ? - How is data stored? (SQL,Oracel, AWS)- what are the integration capabilities like API, File extract direct DB, - Incremental VS Full Load, Data scope and Historical Needs - 
