@@ -43,3 +43,23 @@ SELECT * FROM bronze.crm_cust_info
 WHERE cst_id IN (29466,29473,29449,29433,29483);
 -- 29473,29449,29433,29483
 COMMIT;
+----- STEP 2 STRING fixing if we have any inconsistencies
+SELECT * FROM bronze.crm_cust_info
+SELECT DISTINCT(cst_gndr) FROM bronze.crm_cust_info;
+SELECT DISTINCT(cst_marital_status) FROM bronze.crm_cust_info;
+---- Expectation - to have no spaces begining or at the end and consistent naming format for all strings
+SELECT cst_id,cst_key,
+--cst_firstname & Lastname
+TRIM(cst_firstname) AS cst_firstname,
+TRIM(cst_lastname) AS cst_lastname,
+---cst_marital_status- we dont want to use short forms - Data Normalisation or data standardisation-- transforming coded language to userfriendly
+CASE WHEN TRIM(UPPER(cst_gndr)) = 'M' THEN 'Male'
+	WHEN  TRIM(UPPER(cst_gndr)) = 'F' THEN 'Female'
+	ELSE 'n/a' 
+	END AS cst_gndr,
+CASE WHEN TRIM(UPPER (cst_marital_status)) = 'M' THEN 'Married'
+	WHEN TRIM(UPPER (cst_marital_status)) = 'S' THEN 'Single'
+	ELSE 'n/a'
+	END AS cst_marital_status,
+cst_create_date
+FROM bronze.crm_cust_info
