@@ -1,6 +1,6 @@
 
 We can use Primary key which we got but sometimes we dont have primary key for dimension table then we can create SURROGATE KEY which is sustem generated unique identifier assigned to each record in a table----------> we use this to connect our data model 
-
+we can use DDL based generation or query based Window function (row_number)
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
