@@ -1,76 +1,46 @@
--- check for NULLS and DUPLICATE in Primary Key--
----- DATA CLENSING STARTED -----
---------------------------------
---- Going Through cst_id One by Once to correct them
-SELECT * FROM bronze.crm_cust_info
-WHERE cst_id IN (29466);
--- 29473,29449,29433,29483--
 
--------- Used Transaction to be safe when deleting
-BEGIN;
+CREATE OR REPLACE PROCEDURE silver.load_silver()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
 DELETE FROM bronze.crm_cust_info
-WHERE cst_create_date IN ( '2026-01-26','2026-01-25')
---WHERE cst_create_date = '2026-01-26' OR cst_create_date ='2026-01-25' 
---This will delete:
--- All rows with cst_create_date = '2026-01-26' (no matter the ID)
---AND rows where:
-AND cst_id = 29466
-AND cst_id IN (29466)
-ROLLBACK;
-COMMIT;
-
------- Using WINDOW FUNCTION to DELETE like above
-
------- Using WINDOW FUNCTION to DELETE like above
-
-BEGIN;
-WITH Latest_entry AS
-		
-		(SELECT cst_create_date,cst_id, RANK() OVER(Partition BY cst_id ORDER BY cst_create_date DESC) AS Rank_, ROW_NUMBER() OVER(partition BY cst_id ORDER BY cst_create_date DESC) AS ROW_NUMBER_
-		FROM bronze.crm_cust_info
-		WHERE cst_id IN (29473,29449,29433,29483))
+WHERE cst_create_date IN ('2026-01-26','2026-01-25')  -- your original style
+  AND cst_id = 29466
+  AND cst_id IN (29466); -- redundant but preserved per your script
 
 
---BEGIN; this cant be here CTE must follow the below
+-- ============================
+-- 2) Window-function de-dupe (your CTE style)
+--    Keep the latest per cst_id, remove others for the listed IDs
+-- ============================
+
+
+WITH Latest_entry AS (
+    SELECT
+        cst_create_date,
+        cst_id,
+        RANK()       OVER (PARTITION BY cst_id ORDER BY cst_create_date DESC) AS rank_,
+        ROW_NUMBER() OVER (PARTITION BY cst_id ORDER BY cst_create_date DESC) AS row_number_
+    FROM bronze.crm_cust_info
+    WHERE cst_id IN (29473, 29449, 29433, 29483)
+)
 DELETE FROM bronze.crm_cust_info
-WHERE (cst_create_date,cst_id) IN 
-	(SELECT cst_create_date,cst_id
-	FROM Latest_entry
-	WHERE Rank_ >1)
+WHERE (cst_create_date, cst_id) IN (
+    SELECT cst_create_date, cst_id
+    FROM Latest_entry
+    WHERE rank_ > 1
+);
 
 
-SELECT * FROM bronze.crm_cust_info
-WHERE cst_id IN (29466,29473,29449,29433,29483);
--- 29473,29449,29433,29483
-COMMIT;
------ STEP 2 STRING fixing if we have any inconsistencies
-SELECT * FROM bronze.crm_cust_info
-SELECT DISTINCT(cst_gndr) FROM bronze.crm_cust_info;
-SELECT DISTINCT(cst_marital_status) FROM bronze.crm_cust_info;
----- Expectation - to have no spaces begining or at the end and consistent naming format for all strings
-SELECT cst_id,cst_key,
---cst_firstname & Lastname
-TRIM(cst_firstname) AS cst_firstname,
-TRIM(cst_lastname) AS cst_lastname,
----cst_marital_status- we dont want to use short forms - Data Normalisation or data standardisation-- transforming coded language to userfriendly
-CASE WHEN TRIM(UPPER(cst_gndr)) = 'M' THEN 'Male'
-	WHEN  TRIM(UPPER(cst_gndr)) = 'F' THEN 'Female'
-	ELSE 'n/a' 
-	END AS cst_gndr,
-CASE WHEN TRIM(UPPER (cst_marital_status)) = 'M' THEN 'Married'
-	WHEN TRIM(UPPER (cst_marital_status)) = 'S' THEN 'Single'
-	ELSE 'n/a'
-	END AS cst_marital_status,
-cst_create_date
-FROM bronze.crm_cust_info;
+-- ============================
+-- 3) Insert into silver in your style
+--    - TRIM names
+--    - Normalize gender & marital status
+--    - Take the latest record per cst_id (flag_last = 1)
+-- ============================
 
-
-----------------------------------------------------Inserting into crm_cust_info-------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
+DROP TABLE IF EXISTS silver.crm_cust_info;
 INSERT INTO silver.crm_cust_info (
     cst_id, 
     cst_key, 
@@ -108,13 +78,7 @@ FROM (
 ) t
 WHERE flag_last = 1;
 
-
-
-
-------------------------------------------------------------------------
------------------------------------------------------------------------- crm_prd_info-------------------------
-
-
+--------------------------------------------------------------
 SELECT prd_id,
 prd_key,
 --prd_key has cat_id and prd_key and changing - to _ as it should match in other table for JOIN--
@@ -176,84 +140,7 @@ CAST(LEAD(prd_start_dt) OVER (PARTITION BY prd_key ORDER BY prd_start_dt ASC)- I
 FROM bronze.crm_prd_info;
 
 
-------------------------------------------------------------------------
------------------------------------------------------------------------- crm_sales_details----------------------------
-
-SELECT * FROM bronze.crm_sales_details;
---- From abouve able we are able to identify that dates are integers we need to check that dates are relavent within the range
---and valid dates and make every not valid dates as NULL.
---- Conditions for date to be valid it should not be 0 or should not have more than 8 characters --> 01/01/2020 (8 characters 01012020)
- SELECT 
- CASE
- 	WHEN sls_order_dt = 0 OR LENGTH(CAST(sls_order_dt AS VARCHAR)) <> 8 THEN NULL
-	 ELSE CAST(CAST(sls_order_dt AS VARCHAR) AS DATE)
-	 END AS sls_order_dt,
- CASE
- 	WHEN sls_ship_dt = 0 OR LENGTH(CAST(sls_ship_dt AS VARCHAR)) <> 8 THEN NULL
-	 ELSE CAST(CAST(sls_ship_dt AS VARCHAR) AS DATE)
-	 END AS sls_ship_dt,
- CASE
- 	WHEN sls_due_dt = 0 OR LENGTH(CAST(sls_due_dt AS VARCHAR)) <> 8 THEN NULL
-	 ELSE CAST(CAST(sls_due_dt AS VARCHAR) AS DATE)
-	 END AS sls_due_dt
-FROM bronze.crm_sales_details;
------ From the above query we got the desired result so 
------------------------------------------------------------
------------------------------------------------------------
--- Let us assume that after consultation with experts or stakeholders how we deal with 0 or Negative values and be consistent with you
--- here we assume that we can derive from the available information the wrong or missing information.
--- if price is 0 or null 0r nrgative then use sales and qunatity etc...
-
-SELECT
-CASE 
-	WHEN  sls_sales <= 0 OR sls_sales IS NULL OR sls_sales <> ABS(sls_quantity*sls_price) THEN ABS(sls_quantity * sls_price)
-	ELSE sls_sales 
-	END AS sls_sales,
-CASE 
-	WHEN  sls_quantity <= 0 OR sls_quantity IS NULL OR sls_quantity <> ABS(sls_sales / sls_price) THEN ABS(sls_sales / sls_price)
-	ELSE  sls_quantity
-	END AS sls_quantity,
-CASE 
-	WHEN  sls_price <= 0 OR sls_price IS NULL OR sls_price <> ABS(sls_sales / sls_quantity) THEN ABS(sls_sales / sls_quantity)
-	ELSE  sls_price
-	END AS sls_price
-FROM bronze.crm_sales_details;
-
----------------------------------------------------
----------------------------------------------------
----------------------------------------------------
-SELECT
-sls_ord_num,sls_prd_key,sls_cust_id,
-CASE
- 	WHEN sls_order_dt = 0 OR LENGTH(CAST(sls_order_dt AS VARCHAR)) <> 8 THEN NULL
-	 ELSE CAST(CAST(sls_order_dt AS VARCHAR) AS DATE)
-	 END AS sls_order_dt,
- CASE
- 	WHEN sls_ship_dt = 0 OR LENGTH(CAST(sls_ship_dt AS VARCHAR)) <> 8 THEN NULL
-	 ELSE CAST(CAST(sls_ship_dt AS VARCHAR) AS DATE)
-	 END AS sls_ship_dt,
- CASE
- 	WHEN sls_due_dt = 0 OR LENGTH(CAST(sls_due_dt AS VARCHAR)) <> 8 THEN NULL
-	 ELSE CAST(CAST(sls_due_dt AS VARCHAR) AS DATE)
-	 END AS sls_due_dt,
-CASE 
-	WHEN  sls_sales <= 0 OR sls_sales IS NULL OR sls_sales <> ABS(sls_quantity*sls_price) THEN ABS(sls_quantity * sls_price)
-	ELSE sls_sales 
-	END AS sls_sales,
-CASE 
-	WHEN  sls_quantity <= 0 OR sls_quantity IS NULL OR sls_quantity <> ABS(sls_sales / sls_price) THEN ABS(sls_sales / sls_price)
-	ELSE  sls_quantity
-	END AS sls_quantity,
-CASE 
-	WHEN  sls_price <= 0 OR sls_price IS NULL OR sls_price <> ABS(sls_sales / sls_quantity) THEN ABS(sls_sales / sls_quantity)
-	ELSE  sls_price
-	END AS sls_price
-FROM bronze.crm_sales_details;
-
-
--------------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------- Inseting Data into crm_sales_details---------------
--- 3. CRM Sales Details Table ------ the type is changed for date as they are no more integers.
+------------------------------------------------------------------------------------------
 DROP TABLE IF EXISTS silver.crm_sales_details;
 
 CREATE TABLE silver.crm_sales_details (
@@ -268,8 +155,6 @@ CREATE TABLE silver.crm_sales_details (
     sls_price    INT,
 dwh_create_date TIMESTAMP DEFAULT NOW()
 );
-
-INSERT INTO 
 INSERT INTO silver.crm_sales_details
 (sls_ord_num,sls_prd_key,sls_cust_id,sls_order_dt,sls_ship_dt,sls_due_dt,sls_sales,sls_quantity,sls_price)
 SELECT
@@ -301,36 +186,9 @@ CASE
 FROM bronze.crm_sales_details;
 
 
+------------------------------------------------------------------------------------------------
+DROP TABLE IF EXISTS silver.erp_cust_az12;
 
-
------------------------------------------------------------------------------------
------------------------------------------------------------------------------------
------------------------------------------------------------------------------------
---------------------------------------erp_cust_az12-------------------------------
------------------------------------------------------------------------------------
-
-
-
-SELECT cid, SUBSTRING(cid,4),bdate, gen FROM bronze.erp_cust_az12;
--------- removing prefix from cid to match with cst key from cust_info
-SELECT SUBSTRING(cid,4)
-FROM bronze.erp_cust_az12
-----------fixing gender
-SELECT DISTINCT gen
-FROM bronze.erp_cust_az12;
------ Making sure we have danamic for gender so that it will catch bot f and F
-SELECT
-CASE 
-WHEN UPPER(TRIM(gen)) = 'M' THEN 'Male' 
-WHEN UPPER(TRIM(gen)) = 'F' THEN 'Female' 
-WHEN gen IS NULL OR TRIM(gen) = '' THEN 'n/a'
-ELSE gen
-END
-FROM bronze.erp_cust_az12;
------------------------------------------------------
------------------------------------------------------
-------------Insert data and change schema if required
-------------------------------------------------------
 INSERT INTO silver.erp_cust_az12(cid,bdate,gen)
 SELECT SUBSTRING(cid,4),bdate, CASE 
 WHEN UPPER(TRIM(gen)) = 'M' THEN 'Male' 
@@ -339,13 +197,11 @@ WHEN gen IS NULL OR TRIM(gen) = '' THEN 'n/a'
 ELSE gen
 END
 FROM bronze.erp_cust_az12;
------------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------------------erp_loc_a101-----------------------------------------------------------------------------------
---------------- Based on relations we can connect cid from erp_loc_a101 to crm_cust_info 
------------But cid has '-' 
+
+
+------------------------------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS silver.erp_loc_a101;
 INSERT INTO silver.erp_loc_a101(cid,cntry)
 
 SELECT REPLACE(cid, '-' ,'') AS cid,
@@ -357,25 +213,11 @@ CASE
 	END
 FROM bronze.erp_loc_a101;
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------------------------
-------
 
+--------------------------------------------------------------------------------------------------
+DROP TABLE IF EXISTS silver.erp_px_cat_g1v2;
+INSERT INTO silver.erp_px_cat_g1v2 (id,cat,subcat,maintenance)
+SELECT TRIM(id) id, TRIM(cat) cat, TRIM(subcat) subcat,TRIM(maintenance) maintenance FROM bronze.erp_px_cat_g1v2;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+END;
+$$;
