@@ -6,7 +6,29 @@ Use the Below Code for All tables -------> i have Used for only One table but Ne
 
 -- Keep Truncate if you require when you need to refresh the table with new information--
 
-TRUNCATE TABLE bronze.crm_cust_info
+--------------------------------
+-------------------------------- 
+go to finder cmd shift G - /temp and paste the files there and get path
+
+
+
+--------------- File Path 
+/private/tmp/SQL Warehouse/cust_info.csv
+
+/private/tmp/SQL Warehouse/CUST_AZ12.csv
+
+/private/tmp/SQL Warehouse/LOC_A101.csv
+
+/private/tmp/SQL Warehouse/prd_info.csv
+
+/private/tmp/SQL Warehouse/PX_CAT_G1V2.csv
+
+/private/tmp/SQL Warehouse/sales_details.csv
+---------------------
+---------------------
+
+
+TRUNCATE TABLE bronze.crm_cust_info;
 COPY bronze.crm_cust_info (
     cst_id,
     cst_key,
@@ -16,7 +38,7 @@ COPY bronze.crm_cust_info (
     cst_gndr,
     cst_create_date
 )
-FROM 'C:/SQL/cust_info.csv'  -------> "" YOUR PATH  ""
+FROM '/private/tmp/SQL Warehouse/cust_info.csv'
 WITH (
     FORMAT csv,
     HEADER true,
@@ -25,34 +47,42 @@ WITH (
     NULL '',
     ENCODING 'UTF8'
 );
+----------- When the CSV column names match the table structure, 
+-----------you can load the full dataset without specifying individual columns. 
+-----------If the CSV includes additional fields, explicitly listing only the required table columns ensures PostgreSQL loads only the relevant data and automatically ignores the unused CSV columns.
 
+-- CRM Customer Info
+TRUNCATE TABLE bronze.crm_cust_info;
+COPY bronze.crm_cust_info
+FROM '/private/tmp/SQL Warehouse/cust_info.csv'
+CSV HEADER;
 
---------CREATING STORE PROCEDURE FOR RUNNING ALL 6 TABLE IMPORT
+-- CRM Product Info
+TRUNCATE TABLE bronze.crm_prd_info;
+COPY bronze.crm_prd_info
+FROM '/private/tmp/SQL Warehouse/prd_info.csv'
+CSV HEADER;
 
-CREATE ALTER PROCEDURE bronze.load_bronze AS
+-- CRM Sales Details
+TRUNCATE TABLE bronze.crm_sales_details;
+COPY bronze.crm_sales_details
+FROM '/private/tmp/SQL Warehouse/sales_details.csv'
+CSV HEADER;
 
-BEGIN
+-- ERP Customer Address / Additional Customer Data
+TRUNCATE TABLE bronze.erp_cust_az12;
+COPY bronze.erp_cust_az12
+FROM '/private/tmp/SQL Warehouse/CUST_AZ12.csv'
+CSV HEADER;
 
-TRUNCATE TABLE bronze.crm_cust_info
-COPY bronze.crm_cust_info (
-    cst_id,
-    cst_key,
-    cst_firstname,
-    cst_lastname,
-    cst_marital_status,
-    cst_gndr,
-    cst_create_date
-)
-FROM 'C:/SQL/cust_info.csv'  -------> "" YOUR PATH  ""
-WITH (
-    FORMAT csv,
-    HEADER true,
-    DELIMITER ',',
-    QUOTE '"',
-    NULL '',
-    ENCODING 'UTF8'
-);
+-- ERP Location Data
+TRUNCATE TABLE bronze.erp_loc_a101;
+COPY bronze.erp_loc_a101
+FROM '/private/tmp/SQL Warehouse/LOC_A101.csv'
+CSV HEADER;
 
-
-
-END
+-- ERP Product Category Data
+TRUNCATE TABLE bronze.erp_px_cat_g1v2;
+COPY bronze.erp_px_cat_g1v2
+FROM '/private/tmp/SQL Warehouse/PX_CAT_G1V2.csv'
+CSV HEADER;
