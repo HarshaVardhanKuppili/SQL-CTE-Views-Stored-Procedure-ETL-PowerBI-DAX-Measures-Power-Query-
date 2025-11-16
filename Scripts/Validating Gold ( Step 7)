@@ -1,0 +1,2 @@
+This script runs important data quality checks on the Gold Layer, which is the final, analytics-ready layer of the data warehouse.
+These checks help ensure that all dimensions and fact tables are accurate, consistent, and ready for BI reporting.
