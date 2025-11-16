@@ -1,5 +1,5 @@
 -- Create Database for 
-Add database in PGAdmin 'DataWarehouse'
+CREATE DATABASE "DataWarehouse";
 
 -- Create Schema for 
 
@@ -8,3 +8,5 @@ CREATE SCHEMA bronze;
 CREATE SCHEMA silver;
 
 CREATE SCHEMA gold;
+
+DROP SCHEMA public;
