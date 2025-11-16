@@ -51,6 +51,11 @@ WITH (
 -----------you can load the full dataset without specifying individual columns. 
 -----------If the CSV includes additional fields, explicitly listing only the required table columns ensures PostgreSQL loads only the relevant data and automatically ignores the unused CSV columns.
 
+CREATE OR REPLACE PROCEDURE bronze.load_bronze ()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
 -- CRM Customer Info
 TRUNCATE TABLE bronze.crm_cust_info;
 COPY bronze.crm_cust_info
@@ -86,3 +91,5 @@ TRUNCATE TABLE bronze.erp_px_cat_g1v2;
 COPY bronze.erp_px_cat_g1v2
 FROM '/private/tmp/SQL Warehouse/PX_CAT_G1V2.csv'
 CSV HEADER;
+END;
+$$;
