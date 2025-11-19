@@ -223,8 +223,14 @@ This ensures **clean, conformed, analytics-ready data** with no transformation i
 
 ---
 
-## 🎥 Dashboard Demo (GIF)
+## 🎥 Dashboard Demo 
 
-You can add a GIF animation of your dashboard using:
+<h2 align="center">🎥 Dashboard Demo</h2>
+
+<p align="center">
+  <img src="Animation.gif" width="80%">
+</p>
+
+
 
 
