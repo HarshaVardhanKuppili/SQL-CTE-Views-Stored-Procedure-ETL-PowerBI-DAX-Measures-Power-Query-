@@ -11,7 +11,12 @@
 <p align="center">
 End-to-end SQL-driven Data Warehouse using Bronze → Silver → Gold layers, with dimensional modelling and BI-ready outputs.
 </p>
+---
+<h2 align="center">🎥 Dashboard Demo</h2>
 
+<p align="center">
+  <img src="Animation.gif" width="80%">
+</p>
 ---
 
 # 📑 Table of Contents
@@ -223,13 +228,7 @@ This ensures **clean, conformed, analytics-ready data** with no transformation i
 
 ---
 
-## 🎥 Dashboard Demo 
 
-<h2 align="center">🎥 Dashboard Demo</h2>
-
-<p align="center">
-  <img src="Animation.gif" width="80%">
-</p>
 
 
 
