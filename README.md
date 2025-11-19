@@ -3,7 +3,6 @@
   <img src="https://img.shields.io/badge/Data%20Warehouse-PostgreSQL-blue?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Architecture-Medallion-yellow?style=for-the-badge" />
   <img src="https://img.shields.io/badge/ETL-Pipeline-green?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Power%20BI-Ready-orange?style=for-the-badge" />
 </p>
 
 <h1 align="center">📦 Data Warehouse Project (PostgreSQL + Medallion Architecture + PowerBI)</h1>
